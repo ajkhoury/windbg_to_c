@@ -35,16 +35,39 @@ public:
     static bool is_header( const std::string& line );
 
     template<typename Iter>
-    static bool is_union_or_bitfield( Iter it )
+    static bool is_union_or_bitfield(Iter it)
     {
-        try 
+        try
         {
-            return parse_field_offset( *it ) == parse_field_offset( *(it + 1) );
+            size_t i = 1;
+            do {
+                if (parse_field_offset(*it) == parse_field_offset(*(it + i)))
+                    return true;
+                i++;
+            } while (1);
+            return false;
         }
-        catch (const std::out_of_range&) 
-        { 
+        catch (const std::out_of_range&)
+        {
             // end iterator throws when you try to increment past it
             return false;
+        }
+    }
+
+    template<typename Iter>
+    static size_t find_the_last_union(Iter it)
+    {
+        size_t union_count = 1, i = 1;
+        try {
+            while (1) {
+                if (parse_field_offset(*it) == parse_field_offset(*(it + i)))
+                    union_count = i;
+                i++;
+            }
+        }
+        catch (const std::out_of_range&)
+        {
+            return union_count;
         }
     }
 

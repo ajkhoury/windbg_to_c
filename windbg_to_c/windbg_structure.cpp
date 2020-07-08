@@ -32,12 +32,15 @@ windbg_structure::windbg_structure( const std::string& text )
         {
             std::vector<std::unique_ptr<windbg_field>> union_fields;
             
-            do {
-                union_fields.emplace_back( parse_field( *it ) );
-                ++it;
-            } while (is_union_or_bitfield( it ));
+            size_t union_count = 1, i;
 
-            union_fields.emplace_back( parse_field( *it ) );
+            union_count = find_the_last_union(it);
+
+            for (i = 1; i <= union_count; i++) {
+                union_fields.emplace_back(parse_field(*it));
+                ++it;
+            }
+            union_fields.emplace_back(parse_field(*it));
 
             size_t bitfield_count = std::count_if(
                 union_fields.begin( ), union_fields.end( ), 
