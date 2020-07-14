@@ -16,7 +16,7 @@ public:
     virtual bool is_array( ) const = 0;
     virtual bool is_union( ) const = 0;
     virtual bool is_bitfield( ) const = 0;
-    virtual bool is_bitfield_pack( ) const = 0;
+    virtual bool is_pack( ) const = 0;
     virtual std::string as_string( int tabcount = 0 ) const = 0;
 
     const std::string&  get_name( ) const { return _name; }
@@ -36,7 +36,7 @@ public:
     bool is_array( ) const override { return false; }
     bool is_union( ) const override { return false; }
     bool is_bitfield( ) const override { return false; }
-    bool is_bitfield_pack( ) const override { return false; }
+    bool is_pack( ) const override { return false; }
 
     std::string as_string( int tabcount = 0 ) const override;
 };
@@ -48,7 +48,7 @@ public:
     bool is_array( ) const override { return true; }
     bool is_union( ) const override { return false; }
     bool is_bitfield( ) const override { return false; }
-    bool is_bitfield_pack( ) const override { return false; }
+    bool is_pack( ) const override { return false; }
 
     std::string as_string( int tabcount = 0 ) const override;
 
@@ -65,7 +65,7 @@ public:
     bool is_array( ) const override { return false; }
     bool is_union( ) const override { return true; }
     bool is_bitfield( ) const override { return false; }
-    bool is_bitfield_pack( ) const override { return false; }
+    bool is_pack( ) const override { return false; }
 
     std::string as_string( int tabcount = 0 ) const override;
 
@@ -84,7 +84,7 @@ public:
     bool is_array( ) const override { return false; }
     bool is_union( ) const override { return false; }
     bool is_bitfield( ) const override { return true; }
-    bool is_bitfield_pack( ) const override { return false; }
+    bool is_pack( ) const override { return false; }
 
     std::string as_string( int tabcount = 0 ) const override;
 
@@ -96,20 +96,20 @@ private:
     uint32_t _len;
 };
 
-class windbg_bitfield_pack : public windbg_field {
+class windbg_pack : public windbg_field {
 public:
-    windbg_bitfield_pack( uint32_t offset );
+    windbg_pack(uint32_t offset);
 
-    bool is_array( ) const override { return false; }
-    bool is_union( ) const override { return false; }
-    bool is_bitfield( ) const override { return false; }
-    bool is_bitfield_pack( ) const override { return true; }
+    bool is_array() const override { return false; }
+    bool is_union() const override { return false; }
+    bool is_bitfield() const override { return false; }
+    bool is_pack() const override { return true; }
 
-    std::string as_string( int tabcount = 0 ) const override;
+    std::string as_string(int tabcount = 0) const override;
 
-    void add_bitfield_member( std::unique_ptr<windbg_field>&& m )
+    void add_pack_member(std::unique_ptr<windbg_field>&& m)
     {
-        _members.emplace_back( std::move( m ) );
+        _members.emplace_back(std::move(m));
     }
 private:
     std::vector<std::unique_ptr<windbg_field>> _members;

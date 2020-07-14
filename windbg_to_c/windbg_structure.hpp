@@ -55,19 +55,72 @@ public:
     }
 
     template<typename Iter>
-    static size_t find_the_last_union(Iter it)
+    static bool is_pack(Iter it, Iter end)
     {
-        size_t union_count = 1, i = 1;
-        try {
-            while (1) {
-                if (parse_field_offset(*it) == parse_field_offset(*(it + i)))
-                    union_count = i;
-                i++;
-            }
+        try
+        {
+            if ((it + 1) == end)
+                return false;
+            if (parse_field_offset(*it) < parse_field_offset(*(it + 1)))
+                return true;
+            return false;
         }
         catch (const std::out_of_range&)
         {
-            return union_count;
+            // end iterator throws when you try to increment past it
+            return false;
+        }
+    }
+
+    
+    static bool is_bitfield(const std::string& line)
+    {
+        
+        auto type_start = line.find_first_of(':') + 2;
+        auto type_string = line.substr(type_start);
+        return type_string.find("Pos") == 0;
+
+    }
+
+
+    template<typename Iter>
+    static Iter find_the_end_structure_member_in_union(Iter it, Iter union_end)
+    {
+        Iter the_end_structure_member = it;
+        size_t i = 1;
+        try {
+            while ((it + i) != union_end) {
+                the_end_structure_member = it + i;
+                if(parse_field_offset(*it) == parse_field_offset(*(it + i)))
+                    return the_end_structure_member;
+                i++;
+            }
+            return the_end_structure_member;
+        }
+        catch (const std::out_of_range&)
+        {
+            return the_end_structure_member;
+        }
+    }
+
+    template<typename Iter>
+    static size_t find_the_end_union_member(Iter& it, Iter& end/*behind the last member*/)
+    {
+        
+        size_t i = 1, count;
+        try {
+            while (1) {
+                if (parse_field_offset(*it) == parse_field_offset(*(it + i))) {
+                    end = it + i + 1;
+                    count = i + 1;
+                }
+                i++;
+            }
+            return count;
+        }
+        catch (const std::out_of_range&)
+        {
+            return count;
         }
     }
 
@@ -91,6 +144,8 @@ private:
     }
 
     static std::unique_ptr<windbg_field> parse_field( const std::string& line );
+    std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::string>::iterator& it);
+
 private:
     std::string _name;
     std::vector<std::unique_ptr<windbg_field>> _fields;

@@ -38,14 +38,13 @@ int main(int argc, char** argv)
         std::cout << "Press any key to exit...";
         getchar( );
     }
-    else
+    else 
     {
         std::ifstream input(argv[1]);
         std::ofstream output("result.txt");
         
         std::stringstream inputstream;
         inputstream << input.rdbuf();
-        
         windbg_structure s(inputstream.str());
         
         output << s.as_string(0) << std::endl;

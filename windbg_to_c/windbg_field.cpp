@@ -67,20 +67,20 @@ std::string windbg_bitfield::as_string( int tabcount /*= 0*/ ) const
     return std::string( tabcount * 4, ' ' ) + _type + " " + _name + " : " + std::to_string( _len ) + ";";
 }
 
-windbg_bitfield_pack::windbg_bitfield_pack( uint32_t offset )
-    : windbg_field( "UNNAMED_PACK", "PACK", offset )
-    , _members( )
+windbg_pack::windbg_pack(uint32_t offset)
+    : windbg_field("UNNAMED_PACK", "PACK", offset)
+    , _members()
 {
 
 }
 
-std::string windbg_bitfield_pack::as_string( int tabcount /*= 0*/ ) const
+std::string windbg_pack::as_string(int tabcount /*= 0*/) const
 {
     std::stringstream ss;
-    ss << std::string( tabcount * 4, ' ' ) << "struct {\n";
+    ss << std::string(tabcount * 4, ' ') << "struct {\n";
     for (auto& f : _members) {
-        ss << f->as_string( tabcount + 1 ) << '\n';
+        ss << f->as_string(tabcount + 1) << '\n';
     }
-    ss << std::string( tabcount * 4, ' ' ) << "};";
-    return ss.str( );
+    ss << std::string(tabcount * 4, ' ') << "};";
+    return ss.str();
 }

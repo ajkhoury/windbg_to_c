@@ -3,91 +3,99 @@
 #include <algorithm>
 #include <sstream>
 
-windbg_structure::windbg_structure( const std::string& text )
+windbg_structure::windbg_structure(const std::string& text)
 {
-    auto lines = split_string( text, "\n" );
+    auto lines = split_string(text, "\n");
 
-    std::transform( lines.begin( ), lines.end( ), lines.begin( ), 
-        []( std::string& str ) { return trim_spaces( str ); } 
+    std::transform(lines.begin(), lines.end(), lines.begin(),
+        [](std::string& str) { return trim_spaces(str); }
     );
 
     // For each line...
-    for (auto it = lines.begin( ); it != lines.end( ); ++it) 
+    for (auto it = lines.begin(); it+1 < lines.end(); /*++it*/)
     {
-        if (it->empty( )) 
+        if (it->empty()) 
+        {
             continue;
-
-        // A line can be either:
-        //  - Header
-        //  - Union
-        //  - Bitfield
-        //  - Regular type
-        if (is_header( *it )) 
+            it++;
+        }
+        if (is_header(*it))
         {
-            _name = it->substr( it->find( '!' ) + 1 );
+            _name = it->substr(it->find('!') + 1);
             if (_name[0] == '_')
-                _name = _name.substr( 1 );
+                _name = _name.substr(1);
+            it++;
+            continue;
         }
-        else if (is_union_or_bitfield( it )) 
-        {
-            std::vector<std::unique_ptr<windbg_field>> union_fields;
-            
-            size_t union_count = 1, i;
-
-            union_count = find_the_last_union(it);
-
-            for (i = 1; i <= union_count; i++) {
-                union_fields.emplace_back(parse_field(*it));
-                ++it;
-            }
-            union_fields.emplace_back(parse_field(*it));
-
-            size_t bitfield_count = std::count_if(
-                union_fields.begin( ), union_fields.end( ), 
-                []( const std::unique_ptr<windbg_field>& field ) { 
-                    return field->is_bitfield( ); 
-                } 
-            );
-
-            if (bitfield_count != union_fields.size( ) && bitfield_count != 0)  // Its a union of a bitfield + non-bitfield
-            { 
-                std::unique_ptr<windbg_union> field = std::make_unique<windbg_union>( parse_field_offset( *it ) );
-                std::unique_ptr<windbg_bitfield_pack> pack = std::make_unique<windbg_bitfield_pack>( parse_field_offset( *it ) );
-
-                for (auto& f : union_fields) 
-                {
-                    if (f->is_bitfield( ))
-                        pack->add_bitfield_member( std::move( f ) );
-                    else
-                        field->add_union_member( std::move( f ) );
-                }
-
-                field->add_union_member( std::move( pack ) );
-                _fields.emplace_back( std::move( field ) );
-            }
-            else if (bitfield_count == 0) // Its just a union
-            {
-                std::unique_ptr<windbg_union> field = std::make_unique<windbg_union>( parse_field_offset( *it ) );
-                for (auto& f : union_fields) {
-                    field->add_union_member( std::move( f ) );
-                }
-                _fields.emplace_back( std::move( field ) );
-            }
-            else // It's just a bitfield
-            {
-                std::unique_ptr<windbg_bitfield_pack> pack = std::make_unique<windbg_bitfield_pack>( parse_field_offset( *it ) );
-                for (auto& f : union_fields) {
-                    pack->add_bitfield_member( std::move( f ) );
-                }
-                _fields.emplace_back( std::move( pack ) );
-            }
-        }
-        else 
-        {
-            _fields.emplace_back( parse_field( *it ) );
-        }
+        _fields.emplace_back(handle_field(it));
+        
     }
 }
+
+std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::string>::iterator& it)
+{
+    if (is_union_or_bitfield(it)) 
+    {
+        std::unique_ptr<windbg_union> union_field = std::make_unique<windbg_union>(parse_field_offset(*it));
+
+        std::vector<std::string>::iterator end_member = it;
+        
+        size_t count = find_the_end_union_member(it, end_member);
+
+        while (it != end_member) 
+        {
+            if (is_pack(it, end_member)) 
+            {
+                std::unique_ptr<windbg_pack> pack = std::make_unique<windbg_pack>(parse_field_offset(*it));
+
+                auto& end_structure_member = find_the_end_structure_member_in_union(it, end_member);
+
+                pack->add_pack_member(parse_field(*it));
+                it++;
+                while (it < end_structure_member) 
+                {
+                    pack->add_pack_member(handle_field(it));
+                }
+                
+                union_field->add_union_member(std::move(pack));
+            }
+            else if (is_bitfield(*it)) 
+            {
+                std::unique_ptr<windbg_pack> pack = std::make_unique<windbg_pack>(parse_field_offset(*it));
+                size_t bitfield_count = 0;
+                do {
+                    pack->add_pack_member(parse_field(*it));
+                    bitfield_count++;
+                    it++;
+                    
+                } while(is_bitfield(*it) && it != end_member);
+
+                if (bitfield_count == count)
+                    return pack;    
+                else
+                    union_field->add_union_member(std::move(pack));
+            }
+            else 
+            {
+                union_field->add_union_member(parse_field(*it));
+                /*if ((it + 1) >= end_member)
+                    break;*/
+                it++;
+            }
+        }
+
+        return union_field;
+    }
+    else 
+    {
+        std::unique_ptr<windbg_field> field = parse_field(*it);
+        it++;
+        return field;
+    }
+        
+    
+}
+
 
 bool windbg_structure::is_header( const std::string& line )
 {
@@ -109,7 +117,7 @@ std::unique_ptr<windbg_field> windbg_structure::parse_field( const std::string& 
     auto name_end = line.find_first_of( ' ', name_start );
     auto name_string = line.substr( name_start, name_end - name_start );
 
-    auto type_start = line.find_first_of( ':' ) + 1;
+    auto type_start = line.find_first_of( ':' ) + 2;
     auto type_string = line.substr( type_start );
 
     type_string = trim_spaces( type_string );
@@ -193,6 +201,5 @@ std::string windbg_structure::as_string( int tabcount/* = 0*/ ) const
 
     out << std::string( tabcount * 4, ' ' ) << "} " << _name << ", *P" << _name << "; " << std::endl;
     //out << "// size=0x" << std::hex << _fields.at( _fields.size( ) - 1 )->get_offset( ) + 8 << std::endl;
-
     return out.str( );
 }
