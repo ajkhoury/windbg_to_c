@@ -20,6 +20,23 @@ inline std::vector<std::string> split_string( const std::string& str, const std:
     return strings;
 }
 
+inline std::vector<std::string> split_string_not_drop_delimiter(const std::string& str, const std::string& delimiter)
+{
+    std::vector<std::string> strings;
+
+    std::string::size_type pos = 0;
+    std::string::size_type prev = 0;
+    while ((pos = str.find(delimiter, prev+1)) != std::string::npos) {
+        strings.push_back(str.substr(prev, pos - prev));
+        prev = pos;
+    }
+
+    // To get the last substring (or only, if delimiter is not found)
+    strings.push_back(str.substr(prev));
+
+    return strings;
+}
+
 inline std::string trim_trailing_and_leading_whitespaces( std::string str )
 {
     std::string::iterator it;

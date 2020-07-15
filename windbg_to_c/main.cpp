@@ -38,16 +38,24 @@ int main(int argc, char** argv)
         std::cout << "Press any key to exit...";
         getchar( );
     }
-    else 
+    else
     {
         std::ifstream input(argv[1]);
         std::ofstream output("result.txt");
-        
+
         std::stringstream inputstream;
         inputstream << input.rdbuf();
-        windbg_structure s(inputstream.str());
-        
-        output << s.as_string(0) << std::endl;
+
+        auto structures = split_string_not_drop_delimiter(inputstream.str(), "!");
+
+        for (auto it : structures) 
+        {
+            if (it.find("!") == std::string::npos)
+                continue;
+            windbg_structure s(it);
+            output << s.as_string(0) << std::endl;
+        }
+
     }
     
     return EXIT_SUCCESS;
