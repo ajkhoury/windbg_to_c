@@ -44,12 +44,6 @@ public:
             {
                 if (parse_field_offset(*it) == parse_field_offset(*(it + i))) 
                 {
-                    //// is_bitfield
-                    //while(1)
-                    //{
-                    //    if(parse_field_offset(*it) > parse_field_offset(*(it + i)))
-                    //        return false;
-                    //}
                     return true;
                 }
                     
@@ -155,6 +149,7 @@ private:
 
     static std::unique_ptr<windbg_field> parse_field( const std::string& line );
     std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::string>::iterator& it, std::vector<std::string>::iterator& end);
+
 
 private:
     std::string _name;

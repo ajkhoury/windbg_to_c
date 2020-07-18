@@ -25,6 +25,7 @@ windbg_structure::windbg_structure(const std::string& text)
         {
             it++;
             continue;
+
         }
         if (is_header(*it))
         {
@@ -34,6 +35,7 @@ windbg_structure::windbg_structure(const std::string& text)
             it++;
             continue;
         }
+
         _fields.emplace_back(handle_field(it, lines.end()));
     }
 }
@@ -73,6 +75,7 @@ std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::st
 
                 auto& end_structure_member = find_the_end_structure_member_in_union(it, union_end);
 
+
                 pack->add_pack_member(parse_field(*it));
                 it++;
                 while (it < end_structure_member) 
@@ -103,7 +106,6 @@ std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::st
                 it++;
             }
         }
-
         return union_field;
     }
     else // Regular type
@@ -111,9 +113,7 @@ std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::st
         std::unique_ptr<windbg_field> field = parse_field(*it);
         it++;
         return field;
-    }
-        
-    
+    } 
 }
 
 
