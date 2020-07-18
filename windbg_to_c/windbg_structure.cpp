@@ -49,13 +49,13 @@ std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::st
     if (is_union_or_bitfield(it, end)) 
     {
         std::unique_ptr<windbg_union> union_field = std::make_unique<windbg_union>(parse_field_offset(*it));
-        std::vector<std::string>::iterator end_member = end;
+        auto union_end = end;
         
-        size_t count = find_the_end_union_member(it, end_member, end);
+        size_t union_size = find_the_end_union_member(it, union_end, end);
 
-        while (it < end_member) 
+        while (it < union_end) 
         {
-            if (is_pack(it, end_member)) 
+            if (is_pack(it, union_end)) 
             {
                 /*
                 * Its a Structure in union.
@@ -71,7 +71,7 @@ std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::st
                 */
                 std::unique_ptr<windbg_pack> pack = std::make_unique<windbg_pack>(parse_field_offset(*it));
 
-                auto& end_structure_member = find_the_end_structure_member_in_union(it, end_member);
+                auto& end_structure_member = find_the_end_structure_member_in_union(it, union_end);
 
                 pack->add_pack_member(parse_field(*it));
                 it++;
@@ -90,9 +90,9 @@ std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::st
                     pack->add_pack_member(parse_field(*it));
                     bitfield_count++;
                     it++;
-                } while(it < end_member && is_bitfield(*it));
+                } while(it < union_end && is_bitfield(*it));
 
-                if (bitfield_count == count)        // It just a bitfield pack
+                if (bitfield_count == union_size)        // It just a bitfield pack
                     return pack;    
                 else                                // Its bitfield pack in Union
                     union_field->add_union_member(std::move(pack));

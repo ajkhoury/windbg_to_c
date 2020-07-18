@@ -117,7 +117,7 @@ public:
     static size_t find_the_end_union_member(Iter& it, Iter& end, Iter& limit)
     {
         
-        size_t i = 1, count;
+        size_t i = 1, count = 1;
         try {
             while ((it+i) < limit) {
                 if (parse_field_offset(*it) == parse_field_offset(*(it + i))) {
