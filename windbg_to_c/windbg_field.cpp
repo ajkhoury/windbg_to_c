@@ -84,3 +84,15 @@ std::string windbg_pack::as_string(int tabcount /*= 0*/) const
     ss << std::string(tabcount * 4, ' ') << "};";
     return ss.str();
 }
+
+
+windbg_enum_field::windbg_enum_field(std::string name, uint32_t value)
+    : _name(std::move(name))
+    , _value(value)
+{
+}
+
+std::string windbg_enum_field::as_string(int tabcount /*= 0*/)
+{
+    return std::string(tabcount * 4, ' ') + " " + _name + " = " + std::to_string(_value) + ",";
+}

@@ -214,7 +214,8 @@ std::unique_ptr<windbg_field> windbg_structure::parse_field( const std::string& 
 std::string windbg_structure::as_string( int tabcount/* = 0*/ ) const
 {
     std::stringstream out;
-    out << std::string( tabcount * 4, ' ' ) << "typedef struct _" << _name << "\n{\n";
+    
+    out << std::string( tabcount * 4, ' ' ) << "struct _" << _name << "\n{\n";
 
     if (_fields.size() != 0) 
     {
@@ -223,7 +224,8 @@ std::string windbg_structure::as_string( int tabcount/* = 0*/ ) const
         }
     }
 
-    out << std::string( tabcount * 4, ' ' ) << "} " << _name << ", *P" << _name << "; " << std::endl;
+    out << std::string(tabcount * 4, ' ') << "}; \n";
+    out << std::string(tabcount * 4, ' ') << "typedef struct _" << _name << " " << _name << ", *P" << _name << ";\n" << std::endl;
     //out << "// size=0x" << std::hex << _fields.at( _fields.size( ) - 1 )->get_offset( ) + 8 << std::endl;
     return out.str( );
 }

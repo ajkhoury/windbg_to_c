@@ -178,11 +178,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="windbg_enum.cpp" />
     <ClCompile Include="windbg_field.cpp" />
     <ClCompile Include="windbg_structure.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="helpers.hpp" />
+    <ClInclude Include="windbg_enum.hpp" />
     <ClInclude Include="windbg_field.hpp" />
     <ClInclude Include="windbg_structure.hpp" />
   </ItemGroup>
