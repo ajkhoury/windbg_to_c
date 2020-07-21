@@ -8,16 +8,24 @@ windbg_structure::windbg_structure(const std::string& text)
     auto lines = split_string(text, "\n");
 
     std::transform(lines.begin(), lines.end(), lines.begin(),
-        [](std::string& str) { return trim_spaces(str); }
+        [](std::string& str) { 
+            if ((str.find('!') == std::string::npos) && (str.find("+0x") == std::string::npos)) //Invalid field, empty it.
+            {
+                std::string().swap(str);
+                return str;
+            }
+            return trim_spaces(str); 
+        }
     );
 
     // For each line...
-    for (auto it = lines.begin(); it+1 < lines.end(); /*++it*/)
+    for (auto it = lines.begin(); it+1 < lines.end(); )
     {
         if (it->empty()) 
         {
-            continue;
             it++;
+            continue;
+
         }
         if (is_header(*it))
         {
@@ -27,34 +35,52 @@ windbg_structure::windbg_structure(const std::string& text)
             it++;
             continue;
         }
-        _fields.emplace_back(handle_field(it));
-        
+
+        _fields.emplace_back(handle_field(it, lines.end()));
     }
 }
 
-std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::string>::iterator& it)
+std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::string>::iterator& it, std::vector<std::string>::iterator& end)
 {
-    if (is_union_or_bitfield(it)) 
+    //
+    // A field can be either:
+    //  - Union
+    //  - Bitfield
+    //  - Regular type
+    //
+    if (is_union_or_bitfield(it, end)) 
     {
         std::unique_ptr<windbg_union> union_field = std::make_unique<windbg_union>(parse_field_offset(*it));
-
-        std::vector<std::string>::iterator end_member = it;
+        auto union_end = end;
         
-        size_t count = find_the_end_union_member(it, end_member);
+        size_t union_size = find_the_end_union_member(it, union_end, end);
 
-        while (it != end_member) 
+        while (it < union_end) 
         {
-            if (is_pack(it, end_member)) 
+            if (is_pack(it, union_end)) 
             {
+                /*
+                * Its a Structure in union.
+                * Example:
+                * ...                                                                     union {
+                * +0x020 KernelRoutine    : Ptr64     void                                    struct {
+                * +0x028 RundownRoutine   : Ptr64     void                                        PVOID KernelRoutine;
+                * +0x030 NormalRoutine    : Ptr64     void               =>                       PVOID RundownRoutine;
+                * +0x020 Reserved         : [3] Ptr64 Void                                        PVOID NormalRoutine;
+                * ...                                                                         };
+                *                                                                             PVOID Reserved[3];
+                *                                                                         };
+                */
                 std::unique_ptr<windbg_pack> pack = std::make_unique<windbg_pack>(parse_field_offset(*it));
 
-                auto& end_structure_member = find_the_end_structure_member_in_union(it, end_member);
+                auto& end_structure_member = find_the_end_structure_member_in_union(it, union_end);
+
 
                 pack->add_pack_member(parse_field(*it));
                 it++;
                 while (it < end_structure_member) 
                 {
-                    pack->add_pack_member(handle_field(it));
+                    pack->add_pack_member(handle_field(it, end_structure_member));
                 }
                 
                 union_field->add_union_member(std::move(pack));
@@ -67,33 +93,27 @@ std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::st
                     pack->add_pack_member(parse_field(*it));
                     bitfield_count++;
                     it++;
-                    
-                } while(is_bitfield(*it) && it != end_member);
+                } while(it < union_end && is_bitfield(*it));
 
-                if (bitfield_count == count)
+                if (bitfield_count == union_size)        // It just a bitfield pack
                     return pack;    
-                else
+                else                                // Its bitfield pack in Union
                     union_field->add_union_member(std::move(pack));
             }
-            else 
+            else // Just a union member
             {
                 union_field->add_union_member(parse_field(*it));
-                /*if ((it + 1) >= end_member)
-                    break;*/
                 it++;
             }
         }
-
         return union_field;
     }
-    else 
+    else // Regular type
     {
         std::unique_ptr<windbg_field> field = parse_field(*it);
         it++;
         return field;
-    }
-        
-    
+    } 
 }
 
 
@@ -194,12 +214,18 @@ std::unique_ptr<windbg_field> windbg_structure::parse_field( const std::string& 
 std::string windbg_structure::as_string( int tabcount/* = 0*/ ) const
 {
     std::stringstream out;
-    out << std::string( tabcount * 4, ' ' ) << "typedef struct _" << _name << "\n{\n";
-    for (auto& field : _fields) {
-        out << field->as_string( tabcount + 1 ) << "\t\t\t\t// 0x" << std::hex << field->get_offset( ) << "\n";
+    
+    out << std::string( tabcount * 4, ' ' ) << "struct _" << _name << "\n{\n";
+
+    if (_fields.size() != 0) 
+    {
+        for (auto& field : _fields) {
+            out << field->as_string(tabcount + 1) << "\t\t\t\t// 0x" << std::hex << field->get_offset() << "\n";
+        }
     }
 
-    out << std::string( tabcount * 4, ' ' ) << "} " << _name << ", *P" << _name << "; " << std::endl;
+    out << std::string(tabcount * 4, ' ') << "}; \n";
+    out << std::string(tabcount * 4, ' ') << "typedef struct _" << _name << " " << _name << ", *P" << _name << ";\n" << std::endl;
     //out << "// size=0x" << std::hex << _fields.at( _fields.size( ) - 1 )->get_offset( ) + 8 << std::endl;
     return out.str( );
 }

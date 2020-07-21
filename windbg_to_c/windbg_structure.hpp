@@ -35,16 +35,20 @@ public:
     static bool is_header( const std::string& line );
 
     template<typename Iter>
-    static bool is_union_or_bitfield(Iter it)
+    static bool is_union_or_bitfield(Iter it, Iter end)
     {
         try
         {
             size_t i = 1;
-            do {
-                if (parse_field_offset(*it) == parse_field_offset(*(it + i)))
+            while ((it + i) <= end)
+            {
+                if (parse_field_offset(*it) == parse_field_offset(*(it + i))) 
+                {
                     return true;
+                }
+                    
                 i++;
-            } while (1);
+            } 
             return false;
         }
         catch (const std::out_of_range&)
@@ -104,12 +108,12 @@ public:
     }
 
     template<typename Iter>
-    static size_t find_the_end_union_member(Iter& it, Iter& end/*behind the last member*/)
+    static size_t find_the_end_union_member(Iter& it, Iter& end, Iter& limit)
     {
         
-        size_t i = 1, count;
+        size_t i = 1, count = 1;
         try {
-            while (1) {
+            while ((it+i) < limit) {
                 if (parse_field_offset(*it) == parse_field_offset(*(it + i))) {
                     end = it + i + 1;
                     count = i + 1;
@@ -144,7 +148,8 @@ private:
     }
 
     static std::unique_ptr<windbg_field> parse_field( const std::string& line );
-    std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::string>::iterator& it);
+    std::unique_ptr<windbg_field> windbg_structure::handle_field(std::vector<std::string>::iterator& it, std::vector<std::string>::iterator& end);
+
 
 private:
     std::string _name;

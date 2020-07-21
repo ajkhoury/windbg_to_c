@@ -3,6 +3,7 @@
 #include <sstream>
 #include <fstream>
 #include "windbg_structure.hpp"
+#include "windbg_enum.hpp"
 
 int main(int argc, char** argv)
 {
@@ -40,14 +41,30 @@ int main(int argc, char** argv)
     }
     else 
     {
-        std::ifstream input(argv[1]);
+        std::ifstream input(argv[1]);   //std::ifstream input("C:\\Program Files (x86)\\Windows Kits\\10\\Debuggers\\windbg.log");
         std::ofstream output("result.txt");
-        
+
         std::stringstream inputstream;
         inputstream << input.rdbuf();
-        windbg_structure s(inputstream.str());
-        
-        output << s.as_string(0) << std::endl;
+
+        auto structures = split_string_not_drop_delimiter(inputstream.str(), "!");
+
+        for (auto it : structures) 
+        {
+            if (it.find("!") == std::string::npos)
+                continue;
+            if (it.find("= 0n") != std::string::npos)
+            {
+                windbg_enum e(it);
+                output << e.as_string(0) << std::endl;
+            }
+            else
+            {
+                windbg_structure s(it);
+                output << s.as_string(0) << std::endl;
+            }
+            
+        }
     }
     
     return EXIT_SUCCESS;

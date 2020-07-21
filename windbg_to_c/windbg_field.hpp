@@ -115,3 +115,14 @@ private:
     std::vector<std::unique_ptr<windbg_field>> _members;
 };
 
+
+class windbg_enum_field {
+public:
+    windbg_enum_field(std::string name, uint32_t value);
+
+    std::string as_string(int tabcount = 0);
+
+private:
+    std::string _name;
+    uint32_t _value;
+};
